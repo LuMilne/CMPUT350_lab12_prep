@@ -178,14 +178,50 @@ public:
     // Appends primitive indicies whose bounds intersect with the given queryBounds to candidates.
     // Returns the number of intersection candidates found
     uint32_t queryIntersecting(const AABB<float>& queryBounds, std::vector<uint32_t>& candidates) {
-        // TODO -- do not use recursion, but you may emulate it yourself.
-        auto direction = aabbQueryQuadrant(queryBounds, mBounds);
-        while(direction < INVALID_DIRECTION) {
-            candidates.push_back(direction);
-            aabbEnter(queryBounds, direction);
-            direction = aabbQueryQuadrant(queryBounds, mBounds);
+        const size_t initialCandidateCount = candidates.size();
+        if (!mBounds.intersects(queryBounds)) {
+            return 0;
         }
-        return direction;
+
+        // Emulate recursion with a stack
+        struct StackEntry {
+            uint32_t nodeIdx;
+            AABB<float> cellBounds;
+        };
+        std::vector<StackEntry> nodeStack = {{0, mBounds}};
+
+
+        while (!nodeStack.empty()) {
+            // Take next bounds to check
+            const StackEntry entry = nodeStack.back();
+            nodeStack.pop_back();
+
+            // Get node corresponding to bounds
+            const QuadTreeNode& node = mNodes[entry.nodeIdx];
+            uint32_t primitiveIdx = node.primitivesIdx;
+            // Check all quads within node
+            while (primitiveIdx != INVALID_IDX) {
+                // If quad intersects with target, add index to stack
+                if (mPrimitiveBounds[primitiveIdx].intersects(queryBounds)) {
+                    candidates.push_back(primitiveIdx);
+                }
+                primitiveIdx = mNextPrimitiveIdx[primitiveIdx];
+            }
+
+            // Termination statement: end-of-tree
+            if (!node.isLeaf()) {
+                // Check last quad and add nodes that contain target
+                for (uint32_t direction = 0; direction < 4; ++direction) {
+                    AABB<float> childBounds = entry.cellBounds;
+                    aabbEnter(childBounds, static_cast<OrdinalDirection>(direction));
+                    if (childBounds.intersects(queryBounds)) {
+                        nodeStack.push_back({node.childIdx + direction, childBounds});
+                    }
+                }
+            }
+        }
+        // Return number of primitives added
+        return static_cast<uint32_t>(candidates.size() - initialCandidateCount);
     }
 
     // suitable for sparse updates

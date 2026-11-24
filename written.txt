@@ -1,3 +1,8 @@
 a.
-b.
+b. 
+    If you kept inserting the same point, it would add each insert as a new primitive on the same leaf node. 
+    Once that node has 8 primitives, it would split into leaves and of those children would get all the
+    primitives, instantly maxin-out and splitting again.
+    A way to prevent this would be checking for overlapping primitives, checking that splitting a leaf would
+    actually distribute the targets, or implementing a maximum-depth like this project does with MAX_DEPTH.
 c.

@@ -290,15 +290,46 @@ private:
     // Precondition: currentCell contains query.
     OrdinalDirection aabbQueryQuadrant(const AABB<float>& query,
                                        const AABB<float>& currentCell) const {
-        return {};
+        // Get query's position relative to middle
+        const auto middle = currentCell.middle();
+        // Remember y+ is down
+        const bool left = query.maxPoint.x <= middle.x;
+        const bool right = query.minPoint.x >= middle.x;
+        const bool up = query.maxPoint.y <= middle.y;
+        const bool down = query.minPoint.y >= middle.y;
+
+        // Case: query straddles a midline
+        if((!left & !!right) || (!up && !down)) {
+            return INVALID_DIRECTION
+        }
+
+        if(left) return up ? NW: SW;
+        return up ? NE : SE 
     };
-    // TODO
 
     // modifies a given AABB to obtain the resulting AABB if we were entering the cell on its
     // "direction" quadrant
     // Precondition: direction is not INVALID
-    void aabbEnter(AABB<float>& bounds, OrdinalDirection direction) const {};
-    // TODO
+    void aabbEnter(AABB<float>& bounds, OrdinalDirection direction) const {
+        AABB<float> newBounds;
+        const auto middle = bounds.middle();
+        switch(direction) {
+            case(NW):
+                bounds.maxPoint = middle;
+                return;
+            case(NE):
+                bounds.minPoint.x = middle.x;
+                bounds.maxPoint.y = middle.y;
+                return;
+            case(SW):
+                bounds.minPoint.y = middle.y;
+                bounds.maxPoint.x = middle.x;
+                return;
+            case(SE):
+                bounds.minPoint = middle;
+                return;
+        }
+    };
 
     AABB<float> mBounds;
     size_t mMaxPrimitivesPerLeaf;

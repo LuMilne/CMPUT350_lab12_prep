@@ -179,7 +179,13 @@ public:
     // Returns the number of intersection candidates found
     uint32_t queryIntersecting(const AABB<float>& queryBounds, std::vector<uint32_t>& candidates) {
         // TODO -- do not use recursion, but you may emulate it yourself.
-        return 0;
+        auto direction = aabbQueryQuadrant(queryBounds, mBounds);
+        while(direction < INVALID_DIRECTION) {
+            candidates.push_back(direction);
+            aabbEnter(queryBounds, direction);
+            direction = aabbQueryQuadrant(queryBounds, mBounds);
+        }
+        return direction;
     }
 
     // suitable for sparse updates
@@ -299,19 +305,18 @@ private:
         const bool down = query.minPoint.y >= middle.y;
 
         // Case: query straddles a midline
-        if((!left & !!right) || (!up && !down)) {
-            return INVALID_DIRECTION
+        if((!left && !right) || (!up && !down)) {
+            return INVALID_DIRECTION;
         }
 
         if(left) return up ? NW: SW;
-        return up ? NE : SE 
+        return up ? NE : SE ;
     };
 
     // modifies a given AABB to obtain the resulting AABB if we were entering the cell on its
     // "direction" quadrant
     // Precondition: direction is not INVALID
     void aabbEnter(AABB<float>& bounds, OrdinalDirection direction) const {
-        AABB<float> newBounds;
         const auto middle = bounds.middle();
         switch(direction) {
             case(NW):
